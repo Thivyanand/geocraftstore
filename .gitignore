@@ -1,0 +1,41 @@
+# Dependencies and generated output
+node_modules/
+dist/
+build/
+coverage/
+.cache/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local environment and credentials
+.env*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local databases and backups (including SQLite WAL/SHM files)
+data/
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.sql
+*.dump
+
+# Minecraft server credentials and operator data
+server.properties
+ops.json
+whitelist.json
+banned-players.json
+banned-ips.json
+
+# OS/editor artifacts
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
