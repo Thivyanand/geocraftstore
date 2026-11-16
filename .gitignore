@@ -25,6 +25,7 @@ data/
 *.db
 *.db-*
 *.sql
+!migrations/*.sql
 *.dump
 
 # Minecraft server credentials and operator data
