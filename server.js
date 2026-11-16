@@ -37,7 +37,7 @@ async function initializeStore() {
 
 const storeReady = initializeStore();
 storeReady.catch((error) => {
-  console.error('Store initialization failed:', error.message);
+  console.error('Store initialization failed:', errorDetail(error));
 });
 
 const asyncHandler = (handler) => (req, res, next) => {
@@ -51,6 +51,11 @@ const safeEqual = (a, b) => {
   return left.length === right.length && crypto.timingSafeEqual(left, right);
 };
 const audited = (event, details) => db.insert(auditLogs).values({ event, details });
+const errorDetail = (error) => {
+  let cause = error;
+  while (cause?.cause && cause.cause !== cause) cause = cause.cause;
+  return cause?.message || 'Unknown server error';
+};
 
 function createAdminToken() {
   const expiresAt = Date.now() + ADMIN_SESSION_TTL_MS;
@@ -113,6 +118,7 @@ async function tx(orderId, paymentId) {
 }
 
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -247,7 +253,7 @@ app.post('/api/payments/webhook', asyncHandler(async (req, res) => {
     }
     return res.json({ received: true });
   } catch (error) {
-    console.error('Razorpay webhook processing failed:', error.message);
+    console.error('Razorpay webhook processing failed:', errorDetail(error));
     return res.status(500).json({ error: 'Webhook processing failed' });
   }
 }));
@@ -433,7 +439,7 @@ async function processQueue() {
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
-  console.error('Request failed:', error.message);
+  console.error('Request failed:', errorDetail(error));
   if (req.path.startsWith('/api/')) return res.status(500).json({ error: 'Internal server error' });
   return next(error);
 });

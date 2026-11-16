@@ -46,7 +46,12 @@ test('checkout, payment verification, webhook idempotency, and admin authorizati
     global.fetch = nativeFetch;
   });
 
-  let response = await realGlobalFetch(`${base}/api/admin/login`, {
+  let response = await realGlobalFetch(`${base}/api/health`, {
+    headers: { 'X-Forwarded-For': '203.0.113.17' },
+  });
+  assert.equal(response.status, 200);
+
+  response = await realGlobalFetch(`${base}/api/admin/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password: 'admin_test_password' }),
