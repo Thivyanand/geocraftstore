@@ -69,7 +69,9 @@ if (process.env.NODE_ENV === 'test') {
   );
 } else {
   pool = new PostgresPool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: process.env.VERCEL
+      ? process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL
+      : process.env.DATABASE_URL,
     max: 1,
     idleTimeoutMillis: 5_000,
     connectionTimeoutMillis: 5_000,
