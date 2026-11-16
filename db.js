@@ -1,3 +1,4 @@
+const { attachDatabasePool } = require('@vercel/functions');
 const { drizzle } = require('drizzle-orm/node-postgres');
 const { Pool: PostgresPool } = require('pg');
 const schema = require('./db-schema');
@@ -70,9 +71,10 @@ if (process.env.NODE_ENV === 'test') {
   pool = new PostgresPool({
     connectionString: process.env.DATABASE_URL,
     max: 1,
-    idleTimeoutMillis: 10_000,
+    idleTimeoutMillis: 5_000,
     connectionTimeoutMillis: 5_000,
   });
+  attachDatabasePool(pool);
   pool.on('error', (error) => {
     console.error('Neon database pool error:', error.message);
   });
