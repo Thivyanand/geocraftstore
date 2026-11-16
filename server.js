@@ -37,7 +37,7 @@ async function initializeStore() {
 
 const storeReady = initializeStore();
 storeReady.catch((error) => {
-  console.error('Store initialization failed:', errorDetail(error));
+  console.error('Store initialization failed:', error);
 });
 
 const asyncHandler = (handler) => (req, res, next) => {
