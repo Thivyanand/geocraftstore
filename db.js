@@ -1,7 +1,6 @@
-const { attachDatabasePool } = require('@vercel/functions');
-const { drizzle: neonDrizzle } = require('drizzle-orm/neon-serverless');
+const { neon } = require('@neondatabase/serverless');
+const { drizzle: neonHttpDrizzle } = require('drizzle-orm/neon-http');
 const { drizzle: postgresDrizzle } = require('drizzle-orm/node-postgres');
-const { Pool: NeonPool } = require('@neondatabase/serverless');
 const { Pool: PostgresPool } = require('pg');
 const schema = require('./db-schema');
 
@@ -47,6 +46,7 @@ const testSchemaStatements = [
 ];
 
 let pool;
+let db;
 let testSchemaReady = Promise.resolve();
 
 if (process.env.NODE_ENV === 'test') {
@@ -69,21 +69,12 @@ if (process.env.NODE_ENV === 'test') {
     (ready, statement) => ready.then(() => pool.query(statement)),
     Promise.resolve(),
   );
+  db = postgresDrizzle(pool, { schema });
 } else {
-  pool = new NeonPool({
-    connectionString: process.env.DATABASE_URL,
-    max: 1,
-    idleTimeoutMillis: 5_000,
-    connectionTimeoutMillis: 5_000,
-  });
-  attachDatabasePool(pool);
-  pool.on('error', (error) => {
-    console.error('Neon database pool error:', error.message);
-  });
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is required; connect the Neon integration.');
+  }
+  db = neonHttpDrizzle(neon(process.env.DATABASE_URL), { schema });
 }
-
-const db = process.env.NODE_ENV === 'test'
-  ? postgresDrizzle(pool, { schema })
-  : neonDrizzle(pool, { schema });
 
 module.exports = { db, pool, schema, testSchemaReady };

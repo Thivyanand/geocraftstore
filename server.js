@@ -37,7 +37,7 @@ async function initializeStore() {
 
 const storeReady = initializeStore();
 storeReady.catch((error) => {
-  console.error('Store initialization failed:', error);
+  console.error('Store initialization failed:', errorDetail(error));
 });
 
 const asyncHandler = (handler) => (req, res, next) => {
@@ -95,26 +95,53 @@ async function createRazorpayOrder(amount, receipt) {
 }
 
 async function tx(orderId, paymentId) {
-  return db.transaction(async (transaction) => {
-    const [order] = await transaction.select().from(orders).where(eq(orders.id, orderId)).limit(1);
-    if (!order) throw new Error('Order not found');
-    if (order.status === 'paid') return false;
+  if (process.env.NODE_ENV === 'test') {
+    return db.transaction(async (transaction) => {
+      const [order] = await transaction.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+      if (!order) throw new Error('Order not found');
+      if (order.status === 'paid') return false;
 
-    const [updatedOrder] = await transaction.update(orders)
-      .set({ status: 'paid', razorpayPaymentId: paymentId, updatedAt: new Date() })
-      .where(and(eq(orders.id, orderId), ne(orders.status, 'paid')))
-      .returning({ id: orders.id, username: orders.username, productId: orders.productId });
-    if (!updatedOrder) return false;
+      const [updatedOrder] = await transaction.update(orders)
+        .set({ status: 'paid', razorpayPaymentId: paymentId, updatedAt: new Date() })
+        .where(and(eq(orders.id, orderId), ne(orders.status, 'paid')))
+        .returning({ id: orders.id, username: orders.username, productId: orders.productId });
+      if (!updatedOrder) return false;
 
-    await transaction.insert(deliveries).values({
-      id: crypto.randomUUID(),
-      orderId: updatedOrder.id,
-      username: updatedOrder.username,
-      rank: updatedOrder.productId,
-    }).onConflictDoNothing({ target: deliveries.orderId });
-    await transaction.insert(auditLogs).values({ event: 'payment_verified', details: { orderId, paymentId } });
-    return true;
-  });
+      await transaction.insert(deliveries).values({
+        id: crypto.randomUUID(),
+        orderId: updatedOrder.id,
+        username: updatedOrder.username,
+        rank: updatedOrder.productId,
+      }).onConflictDoNothing({ target: deliveries.orderId });
+      await transaction.insert(auditLogs).values({ event: 'payment_verified', details: { orderId, paymentId } });
+      return true;
+    });
+  }
+
+  const deliveryId = crypto.randomUUID();
+  const result = await db.execute(sql`
+    WITH updated_order AS (
+      UPDATE orders
+      SET status = 'paid', razorpay_payment_id = ${paymentId}, updated_at = now()
+      WHERE id = ${orderId} AND status <> 'paid'
+      RETURNING id, username, product_id
+    ), inserted_delivery AS (
+      INSERT INTO deliveries (id, order_id, username, rank)
+      SELECT ${deliveryId}, id, username, product_id FROM updated_order
+      ON CONFLICT (order_id) DO NOTHING
+      RETURNING order_id
+    ), inserted_audit AS (
+      INSERT INTO audit_logs (event, details)
+      SELECT 'payment_verified', jsonb_build_object('orderId', id, 'paymentId', ${paymentId}::text)
+      FROM updated_order
+      RETURNING event
+    )
+    SELECT EXISTS (SELECT 1 FROM orders WHERE id = ${orderId}) AS order_found,
+      EXISTS (SELECT 1 FROM updated_order) AS updated
+  `);
+  const [transition] = result.rows;
+  if (!transition.order_found) throw new Error('Order not found');
+  return transition.updated;
 }
 
 app.disable('x-powered-by');
