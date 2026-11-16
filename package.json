@@ -4,7 +4,24 @@
   "private": true,
   "description": "GeoCraft SMP premium rank store",
   "main": "server.js",
-  "scripts": { "start": "node server.js", "dev": "node --watch server.js", "test": "node --test" },
-  "engines": { "node": ">=22.13" },
-  "dependencies": { "express": "^4.21.2", "express-rate-limit": "^7.5.0", "helmet": "^8.0.0", "rcon-client": "^4.2.5" }
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.10",
+    "drizzle-orm": "^0.45.4",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "pg": "^8.23.1",
+    "rcon-client": "^4.2.5"
+  },
+  "devDependencies": {
+    "pg-mem": "^3.0.14"
+  }
 }
